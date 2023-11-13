@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DEFECTS>
+  <DEFECT>
+    <SFA>
+      <FILEPATH>C:\Users\lukas\source\repos\ProjectManagementSystem\</FILEPATH>
+      <FILENAME>ProjectManagementSystem.cpp</FILENAME>
+      <LINE>32</LINE>
+      <COLUMN>0</COLUMN>
+    </SFA>
+    <DEFECTCODE>26495</DEFECTCODE>
+    <DESCRIPTION>Variable 'Project::teamMembers' is uninitialized. Always initialize a member variable (type.6).</DESCRIPTION>
+    <FUNCTION>Project::{ctor}</FUNCTION>
+    <DECORATED>??0Project@@QEAA@XZ</DECORATED>
+    <FUNCLINE>32</FUNCLINE>
+    <ADDITIONALINFO>
+      <targetSymbol>Project::teamMembers</targetSymbol>
+    </ADDITIONALINFO>
+    <PATH></PATH>
+  </DEFECT>
+  <DEFECT>
+    <SFA>
+      <FILEPATH>C:\Users\lukas\source\repos\ProjectManagementSystem\</FILEPATH>
+      <FILENAME>ProjectManagementSystem.cpp</FILENAME>
+      <LINE>26</LINE>
+      <COLUMN>0</COLUMN>
+    </SFA>
+    <DEFECTCODE>26495</DEFECTCODE>
+    <DESCRIPTION>Variable 'TeamMember::next' is uninitialized. Always initialize a member variable (type.6).</DESCRIPTION>
+    <FUNCTION>TeamMember::{ctor}</FUNCTION>
+    <DECORATED>??0TeamMember@@QEAA@XZ</DECORATED>
+    <FUNCLINE>26</FUNCLINE>
+    <ADDITIONALINFO>
+      <targetSymbol>TeamMember::next</targetSymbol>
+    </ADDITIONALINFO>
+    <PATH></PATH>
+  </DEFECT>
+  <DEFECT>
+    <SFA>
+      <FILEPATH>C:\Users\lukas\source\repos\ProjectManagementSystem\</FILEPATH>
+      <FILENAME>ProjectManagementSystem.cpp</FILENAME>
+      <LINE>16</LINE>
+      <COLUMN>0</COLUMN>
+    </SFA>
+    <DEFECTCODE>26495</DEFECTCODE>
+    <DESCRIPTION>Variable 'Task::priority' is uninitialized. Always initialize a member variable (type.6).</DESCRIPTION>
+    <FUNCTION>Task::{ctor}</FUNCTION>
+    <DECORATED>??0Task@@QEAA@XZ</DECORATED>
+    <FUNCLINE>16</FUNCLINE>
+    <ADDITIONALINFO>
+      <targetSymbol>Task::priority</targetSymbol>
+    </ADDITIONALINFO>
+    <PATH></PATH>
+  </DEFECT>
+</DEFECTS>
