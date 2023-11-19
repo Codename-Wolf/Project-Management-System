@@ -1,19 +1,21 @@
-#include <iostream>
+﻿#include <iostream>
 #include <deque>
 #include <forward_list>
 #include <fstream>
 #include <string>
-#include <cstdlib> //system("cls")
-#include <ctime> //norint parodyti tikslu projekto sukurimo laika
-#pragma warning(disable : 4996) //ignoruoja Visual Studio ispejima del localtime
-
-/*
-TODO:
-1. In console not seeing error msges like member not found etc it just goes right to menu after clearing screen
-2. Functions dont work in general / are unfinished
-*/
+#include <cstdlib> // system("cls")
+#include <ctime>   // norint parodyti tikslu projekto sukurimo laika
+#include <limits>  // del numeric_limits
+#pragma warning(disable : 4996) // ignoruoja Visual Studio ispejima del localtime
 
 using namespace std;
+
+// sita funkcija valo input buffer kad nebutu nematomu tarpu del \n ir panasiai
+void clearInputBuffer()
+{
+    std::cin.clear();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
 
 struct Task
 {
@@ -22,21 +24,33 @@ struct Task
     int priority;
 };
 
-
 struct TeamMember
 {
     string name;
     string position;
-    deque<Task> tasks;
-    TeamMember* next; //TS pointeris
+    int skill;
+    deque<Task> tasks; // dekas
+    TeamMember* next;  // TS pointeris
 };
 
 struct Project
 {
     string title;
-    TeamMember* teamMembers; //pointeris kuris yra TS galva
+    time_t startTime;
+    forward_list<TeamMember> teamMembers; // tiesinis sarasas
 };
 
+string GetCurrentDateTime()
+{
+    time_t currentTime = time(nullptr);      // gaunamas dabartinis laikas
+    tm* timeInfo = localtime(&currentTime); // konvertuoja laika i struct tm
+    char buffer[20];
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeInfo); // formatuoja data ir laika
+    return string(buffer);
+}
+
+void DeleteTask(Project& project);
+void UpdateReport(const Project& project, const string& changeDescription);
 void CreateProject(Project& project);
 void CreateTeam(Project& project);
 void CreateTask(Project& project);
@@ -49,31 +63,31 @@ void FinishProject(Project& project);
 int main()
 {
     Project currentProject;
-    currentProject.teamMembers = nullptr;
 
-	while (true)
-	{
+    while (true)
+    {
         system("cls");
 
-        cout << "\nProject Management System\n";
+        cout << "\n>>> Project Management System <<<\n";
         cout << "1. Create Project\n";
         cout << "2. Create Team\n";
         cout << "3. Create & Assign Task\n";
         cout << "4. View Tasks\n";
         cout << "5. Generate Individual Task File\n";
-        cout << "6. Receive Individual Reports\n";
-        cout << "7. Reassign Task\n";
+        cout << "6. Reassign Task\n";
+        cout << "7. Delete Task\n";
         cout << "8. Finish Project\n";
         cout << "9. Exit\n";
         cout << "Select an option: ";
         int menuChoice;
         cin >> menuChoice;
 
-        switch (menuChoice) {
+        switch (menuChoice)
+        {
         case 1:
             CreateProject(currentProject);
             break;
-        case 2: 
+        case 2:
             CreateTeam(currentProject);
             break;
         case 3:
@@ -86,10 +100,10 @@ int main()
             GenerateTaskFile(currentProject);
             break;
         case 6:
-            ReceiveReport(currentProject);
+            ReassignTask(currentProject);
             break;
         case 7:
-            ReassignTask(currentProject);
+            DeleteTask(currentProject);
             break;
         case 8:
             FinishProject(currentProject);
@@ -99,22 +113,22 @@ int main()
             return 0;
         default:
             cout << "Invalid option.\n";
+            clearInputBuffer();
+            cin.get();
         }
-
-	}
+    }
 
     return 0;
 }
 
 void CreateProject(Project& project)
 {
-    time_t currentTime = time(nullptr); //gaunamas dabartinis laikas
-    tm* timeInfo = localtime(&currentTime); //konvertuoja laika i struct tm
+    project.startTime = time(nullptr); // issaugo project start time
     char buffer[20];
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeInfo); //formatuoja data ir laika
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", localtime(&project.startTime));
 
     cout << "Enter project title: ";
-    cin.ignore();
+    clearInputBuffer();
     getline(cin, project.title);
 
     ofstream projectFile("project.txt");
@@ -124,6 +138,7 @@ void CreateProject(Project& project)
     cout << "Project created successfully.\n";
 
     cout << "<<<Type any key to continue>>>\n";
+    clearInputBuffer();
     cin.get();
 }
 
@@ -133,35 +148,31 @@ void CreateTeam(Project& project)
     int numMembers;
     cin >> numMembers;
 
+    clearInputBuffer();
+
     for (int i = 0; i < numMembers; i++)
     {
         TeamMember newMember;
+
         cout << "Enter team member name: ";
-        cin.ignore();
         getline(cin, newMember.name);
 
         cout << "Enter team member position: ";
-        cin.ignore();
         getline(cin, newMember.position);
 
-        newMember.next = nullptr;  // Set the next pointer to nullptr for the new member
+        cout << "Enter team member skill (1 - 6): ";
+        cin >> newMember.skill;
 
-        if (project.teamMembers != nullptr) {
-            // Find the last member in the team
-            TeamMember* lastMember = project.teamMembers;
-            while (lastMember->next != nullptr) {
-                lastMember = lastMember->next;
-            }
-            // Set the next pointer of the last member to the new member
-            lastMember->next = new TeamMember(newMember);
-        }
-        else {
-            // If the team is empty, set the new member as the head of the team
-            project.teamMembers = new TeamMember(newMember);
-        }
+        newMember.tasks.clear();
+
+        project.teamMembers.push_front(newMember);
+
+        clearInputBuffer();
     }
+
     cout << "Team created successfully.\n";
     cout << "<<<Type any key to continue>>>\n";
+    clearInputBuffer();
     cin.get();
 }
 
@@ -169,14 +180,14 @@ void CreateTask(Project& project)
 {
     string memberName;
     cout << "Enter team member name: ";
-    cin.ignore();
+    clearInputBuffer();
     getline(cin, memberName);
 
-    TeamMember* currentMember = project.teamMembers;
+    auto it = project.teamMembers.begin();
 
-    while (currentMember != nullptr)
+    while (it != project.teamMembers.end())
     {
-        if (currentMember->name == memberName)
+        if (it->name == memberName)
         {
             Task task;
             cout << "Enter task title: ";
@@ -185,143 +196,192 @@ void CreateTask(Project& project)
             cout << "Enter task description: ";
             getline(cin, task.description);
 
-            cout << "Enter task priority (1 - High, 2 - Medium, 3 - Low): ";
+            cout << "Enter task priority (3 - High, 2 - Medium, 1 - Low): ";
             cin >> task.priority;
 
-            currentMember->tasks.push_back(task);
+            it->tasks.push_back(task);
             cout << "Task assigned successfully.\n";
             cout << "<<<Type any key to continue>>>\n";
+            clearInputBuffer();
             cin.get();
+
+            // UPDATE REPORT
+            UpdateReport(project, "Task assigned to " + it->name + ".\n");
             return;
         }
 
-        currentMember = currentMember->next;
-
-        if (currentMember == project.teamMembers)
-        {
-            cout << "Team member not found.\n";
-            cout << "<<<Type any key to continue>>>\n";
-            cin.get();
-            return;
-        }
+        ++it;
     }
+
+    cout << "Team member not found.\n";
+    cout << "<<<Type any key to continue>>>\n";
+    clearInputBuffer();
+    cin.get();
 }
 
 void ViewTasks(const Project& project)
 {
-    TeamMember* currentMember = project.teamMembers;
+    auto it = project.teamMembers.begin();
 
-    if (currentMember == nullptr)
+    if (it == project.teamMembers.end())
     {
         cout << "No team members in the project.\n";
         cout << "<<<Type any key to continue>>>\n";
+        cin.ignore();
         cin.get();
         return;
     }
 
     do
     {
-        cout << "\nTeam Member: " << currentMember->name << "\nPosition: " << currentMember->position << "\nTasks:\n";
+        cout << "\nTeam Member: " << it->name << "\nPosition: " << it->position << "\nSkill Level: " << it->skill << "\nTasks:\n";
 
-        for (const auto& task : currentMember->tasks) {
-            cout << "  Title: " << task.title << "\n  Description: " << task.description
-                 << "\n  Priority: " << task.priority << "\n\n";
+        if (it->tasks.empty())
+        {
+            cout << "No tasks assigned.\n";
         }
-        currentMember = currentMember->next;
-    } while (currentMember != nullptr && currentMember != project.teamMembers); //ciklas eina kol toliau yra sekantis team member, 
-} //prie kurio dar nebuvo prieita (jei prieinamas priekinis "head", reiskias perejom visus team members).
+        else
+        {
+            for (const auto& task : it->tasks)
+            {
+                cout << "  Title: " << task.title << "\n  Description: " << task.description
+                    << "\n  Priority (3 - High ; 2 - Medium ; 1 - Low): " << task.priority << "\n\n";
+            }
+        }
+        ++it;
+    } while (it != project.teamMembers.end());
 
-void GenerateTaskFile(const Project& project) {
-    TeamMember* currentMember = project.teamMembers;
+    cout << "<<<Type any key to continue>>>\n";
+    cin.ignore();
+    cin.get();
+}
 
-    if (currentMember == nullptr) {
+void GenerateTaskFile(const Project& project)
+{
+    auto it = project.teamMembers.begin();
+
+    if (it == project.teamMembers.end())
+    {
         cout << "No team members in the project.\n";
         cout << "<<<Type any key to continue>>>\n";
+        clearInputBuffer();
         cin.get();
         return;
     }
 
-    do {
-        ofstream taskFile(currentMember->name + "_tasks.txt");
+    do
+    {
+        ofstream taskFile(it->position + "_tasks.txt");
 
-        taskFile << "Team Member: " << currentMember->name << "\nPosition: " << currentMember->position << "\n\nTasks:\n";
+        taskFile << "Team Member: " << it->name << "\nPosition: " << it->position << "\n\nTasks:\n";
 
-        for (const auto& task : currentMember->tasks) {
-            taskFile << "  Title: " << task.title << "\n  Description: " << task.description
+        if (it->tasks.empty())
+        {
+            taskFile << "No tasks assigned.\n";
+        }
+        else
+        {
+            for (const auto& task : it->tasks)
+            {
+                taskFile << "  Title: " << task.title << "\n  Description: " << task.description
+                    << "\n  Priority: " << task.priority << "\n\n";
+            }
+        }
+
+        // susumuoja visu task priority skaicius
+        int totalPriority = 0;
+        for (const auto& task : it->tasks)
+        {
+            totalPriority += task.priority;
+        }
+        // zemiau tikriname ar spes ar ne
+        string completionStatus = (it->skill >= totalPriority) ? "On Time" : "Late";
+        taskFile << "Estimated to complete: " << completionStatus << "\n";
+        taskFile.close();
+
+        cout << "Task file generated for " << it->name << ".\n";
+        cout << "<<<Type any key to continue>>>\n";
+        clearInputBuffer();
+        cin.get();
+
+        ++it;
+    } while (it != project.teamMembers.end());
+}
+
+void UpdateReport(const Project& project, const string& changeDescription)
+{
+    ofstream reportFile("report.txt", ios::app); // pridedame (append) teksta prie egzistuojancio report.txt
+    reportFile << "Change date: " << GetCurrentDateTime() << "\n";
+
+    auto it = project.teamMembers.begin();
+    while (it != project.teamMembers.end())
+    {
+        reportFile << it->name << ", " << it->position << "\n";
+        for (const auto& task : it->tasks)
+        {
+            reportFile << "  Title: " << task.title << "\n  Description: " << task.description
                 << "\n  Priority: " << task.priority << "\n\n";
         }
 
-        taskFile.close();
-        cout << "Task file generated for " << currentMember->name << ".\n";
-
-        currentMember = currentMember->next;
-    } while (currentMember != project.teamMembers);
-}
-
-void ReceiveReport(const Project& project) {
-    TeamMember* currentMember = project.teamMembers;
-
-    if (currentMember == nullptr) {
-        cout << "No team members in the project.\n";
-        cout << "<<<Type any key to continue>>>\n";
-        cin.get();
-        return;
+        ++it;
     }
 
-    do {
-        // Assuming you have some way to determine the status of tasks for each member
-        // You can modify this part based on the specifics of your program
-        cout << "Report for " << currentMember->name << ":\n";
-        for (const auto& task : currentMember->tasks) {
-            cout << "  Title: " << task.title << "\n  Status: " << "StatusHere" << "\n\n";
-        }
-
-        currentMember = currentMember->next;
-    } while (currentMember != project.teamMembers);
+    reportFile << changeDescription << "\n\n";
+    reportFile.close();
 }
 
-void ReassignTask(Project& project) {
+void ReassignTask(Project& project)
+{
     string sourceMemberName, destinationMemberName;
 
     cout << "Enter the name of the team member from whose tasks you want to reassign: ";
-    cin.ignore();
+    clearInputBuffer();
     getline(cin, sourceMemberName);
 
-    TeamMember* sourceMember = project.teamMembers;
+    auto sourceMember = project.teamMembers.begin();
 
-    while (sourceMember != nullptr) {
-        if (sourceMember->name == sourceMemberName) {
-            break; // Found the source member
+    while (sourceMember != project.teamMembers.end())
+    {
+        if (sourceMember->name == sourceMemberName)
+        {
+            break; // radome pradini member
         }
-        sourceMember = sourceMember->next;
+        ++sourceMember;
 
-        if (sourceMember == project.teamMembers) {
+        if (sourceMember == project.teamMembers.end()) // jei perejom per visus ir neradom
+        {
             cout << "Team member not found.\n";
             cout << "<<<Type any key to continue>>>\n";
+            clearInputBuffer();
             cin.get();
             return;
         }
     }
 
-    // Check if sourceMember is NULL before entering the loop
-    if (sourceMember == nullptr) {
+    // tikriname ar sourceMember egzistuoja
+    if (sourceMember == project.teamMembers.end())
+    {
         cout << "Team member not found.\n";
         cout << "<<<Type any key to continue>>>\n";
+        clearInputBuffer();
         cin.get();
         return;
     }
 
     cout << "\nTasks of " << sourceMemberName << ":\n";
     int taskCount = 1;
-    for (const auto& task : sourceMember->tasks) {
+    for (const auto& task : sourceMember->tasks)
+    {
         cout << taskCount << ". Title: " << task.title << "\n   Description: " << task.description
             << "\n   Priority: " << task.priority << "\n\n";
         taskCount++;
     }
 
-    if (sourceMember->tasks.empty()) {
+    if (sourceMember->tasks.empty())
+    {
         cout << "No tasks to reassign.\n";
         cout << "<<<Type any key to continue>>>\n";
+        clearInputBuffer();
         cin.get();
         return;
     }
@@ -330,9 +390,11 @@ void ReassignTask(Project& project) {
     cout << "Enter the number of the task you want to reassign: ";
     cin >> selectedTask;
 
-    if (selectedTask < 1 || selectedTask > sourceMember->tasks.size()) {
+    if (selectedTask < 1 || selectedTask > sourceMember->tasks.size())
+    {
         cout << "Invalid task number.\n";
         cout << "<<<Type any key to continue>>>\n";
+        clearInputBuffer();
         cin.get();
         return;
     }
@@ -344,30 +406,153 @@ void ReassignTask(Project& project) {
     sourceMember->tasks.erase(it);
 
     cout << "Enter the name of the team member to whom you want to reassign the task: ";
-    cin.ignore();
+    clearInputBuffer();
     getline(cin, destinationMemberName);
 
-    TeamMember* destinationMember = project.teamMembers;
+    auto destinationMember = project.teamMembers.begin();
 
-    while (destinationMember != nullptr) {
-        if (destinationMember->name == destinationMemberName) {
+    while (destinationMember != project.teamMembers.end())
+    {
+        if (destinationMember->name == destinationMemberName)
+        {
             destinationMember->tasks.push_back(reassignTask);
             cout << "Task reassigned successfully.\n";
             cout << "<<<Type any key to continue>>>\n";
+            clearInputBuffer();
             cin.get();
+
+            UpdateReport(project, "Task reassigned from " + sourceMemberName + " to " + destinationMemberName + ".\n");
+
             return;
         }
-        destinationMember = destinationMember->next;
+        ++destinationMember;
 
-        if (destinationMember == project.teamMembers) {
+        if (destinationMember == project.teamMembers.end())
+        {
             cout << "Destination team member not found.\n";
             cout << "<<<Type any key to continue>>>\n";
+            clearInputBuffer();
             cin.get();
             return;
         }
     }
 }
 
-void FinishProject(Project& project) {
-    // Add code here to finish the project and update the project document.
+void DeleteTask(Project& project)
+{
+    string memberName;
+    cout << "Enter team member name: ";
+    clearInputBuffer();
+    getline(cin, memberName);
+
+    auto it = project.teamMembers.begin();
+
+    while (it != project.teamMembers.end())
+    {
+        if (it->name == memberName)
+        {
+            if (it->tasks.empty())
+            {
+                cout << "No tasks to delete.\n";
+                cout << "<<<Type any key to continue>>>\n";
+                clearInputBuffer();
+                cin.get();
+                return;
+            }
+
+            cout << "\nTasks of " << memberName << ":\n";
+            int taskCount = 1;
+            for (const auto& task : it->tasks)
+            {
+                cout << taskCount << ". Title: " << task.title << "\n   Description: " << task.description
+                    << "\n   Priority: " << task.priority << "\n\n";
+                taskCount++;
+            }
+
+            int selectedTask;
+            cout << "Enter the number of the task you want to delete: ";
+            cin >> selectedTask;
+
+            if (selectedTask < 1 || selectedTask > it->tasks.size())
+            {
+                cout << "Invalid task number.\n";
+                cout << "<<<Type any key to continue>>>\n";
+                clearInputBuffer();
+                cin.get();
+                return;
+            }
+
+            auto taskIt = it->tasks.begin();
+            advance(taskIt, selectedTask - 1);
+            it->tasks.erase(taskIt);
+
+            cout << "Task deleted successfully.\n";
+            cout << "<<<Type any key to continue>>>\n";
+            clearInputBuffer();
+            cin.get();
+
+            UpdateReport(project, "Task deleted from " + memberName + "'s list.\n");
+
+            return;
+        }
+
+        ++it;
+    }
+
+    cout << "Team member not found.\n";
+    cout << "<<<Type any key to continue>>>\n";
+    clearInputBuffer();
+    cin.get();
+}
+
+
+void FinishProject(Project& project)
+{
+    // Tikriname ar isvis egzistuoja project.txt
+    fstream checkFile("project.txt", ios::in);
+
+    if (!checkFile.is_open())
+    {
+        cout << "ERROR: project.txt does not exist. Please create a project first.\n";
+        cout << "<<<Type any key to continue>>>\n";
+        clearInputBuffer();
+        cin.get();
+        return;
+    }
+    checkFile.close();
+
+    // ios::app (append) atidaro egzistuojanti project.txt
+    ofstream projectFile("project.txt", ios::app);
+
+    // suraso info
+    projectFile << "\nEnd Date: " << GetCurrentDateTime() << "\nStatus: ";
+
+    auto it = project.teamMembers.begin();
+    bool finishedOnTime = true;
+
+    while (it != project.teamMembers.end())
+    {
+        int totalPriority = 0;
+        for (const auto& task : it->tasks)
+        {
+            totalPriority += task.priority;
+        }
+
+        if (it->skill < totalPriority) // tikrina ar project baigiasi laiku
+        {
+            finishedOnTime = false;
+            break;
+        }
+
+        ++it;
+    }
+
+    projectFile << (finishedOnTime ? "FINISHED ON TIME" : "FINISHED LATE") << "\n";
+
+    projectFile.close();
+
+    cout << "Project finish report added to project.txt.\n";
+    cout << "<<<Type any key to continue>>>\n";
+    clearInputBuffer();
+    cin.get();
 }
