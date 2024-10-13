@@ -25,8 +25,6 @@ to discuss what you would like to change.
 
 Please make sure to update tests as appropriate.
 
-^ This is what I would say if this repository was important ^
-
 ## License
 
 MIT License
